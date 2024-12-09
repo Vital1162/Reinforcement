@@ -63,25 +63,28 @@ class ValueIterationAgent(ValueEstimationAgent):
 
     def runValueIteration(self):
         """
-        Run the value iteration algorithm. Note that in standard
-        value iteration, V_k+1(...) depends on V_k(...)'s.
+        Run the value iteration algorithm efficiently.
+        Optimizes computation of value updates across iterations.
         """
-        "*** YOUR CODE HERE ***"
-
         for _ in range(self.iterations):
-            newValues = util.Counter()
+            values = self.values.copy()
             for state in self.mdp.getStates():
                 if self.mdp.isTerminal(state):
-                    newValues[state] = 0
+                    values[state] = 0
                     continue
-                actionValues = [
-                    self.computeQValueFromValues(state, action)
-                    for action in self.mdp.getPossibleActions(state)
-                ]
 
-                if actionValues:
-                    newValues[state] = max(actionValues)
-            self.values = newValues
+                values[state] = max(
+                    (
+                        self.computeQValueFromValues(state, action)
+                        for action in self.mdp.getPossibleActions(state)
+                    ),
+                    default=0,
+                )
+
+            if values == self.values:
+                break
+
+            self.values = values
 
     def getValue(self, state):
         """
@@ -95,13 +98,14 @@ class ValueIterationAgent(ValueEstimationAgent):
         value function stored in self.values.
         """
         "*** YOUR CODE HERE ***"
-        qValue = 0
-        for nextState, prob in self.mdp.getTransitionStatesAndProbs(state, action):
-            qValue += prob * (
+        return sum(
+            prob
+            * (
                 self.mdp.getReward(state, action, nextState)
                 + self.discount * self.values[nextState]
             )
-        return qValue
+            for nextState, prob in self.mdp.getTransitionStatesAndProbs(state, action)
+        )
 
     def computeActionFromValues(self, state):
         """
